@@ -1,0 +1,23 @@
+<div class="container">
+    <header class="header">
+        <h1 class="title">{{title}}</h1>
+        <p class="subtitle">Aqui está a lista de contatos:</p>
+    </header>
+
+    <section class="content">
+        <div class="list-section">
+            <h2 class="list-title">Contatos:</h2>
+            <ul class="item-list">
+                {{#each contacts}}
+                    <li class="item">
+                        {{name}} - <a href="mailto:{{email}}" class="email">{{email}}</a>
+                    </li>
+                {{/each}}
+            </ul>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <p class="footer-text">Copyright &copy; 2024. Todos os direitos reservados.</p>
+    </footer>
+</div>

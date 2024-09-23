@@ -1,0 +1,31 @@
+<div class="container">
+    <header class="header">
+        <h1 class="title">Olá mundo!</h1>
+    </header>
+
+    <section class="content">
+        <article class="intro">
+            <p>Esta é uma simples página de boas-vindas usando o layout estilizado.</p>
+        </article>
+    </section>
+
+    <section>
+        <article>
+            {{#each items}}
+            <li class="item">
+                {{item}}
+            </li>
+            {{/each}}
+        </article>
+
+        <button id="state">state</button>
+
+        <article>
+            counter: {{counter}}
+        </article>
+    </section>
+
+    <footer class="footer">
+        <p class="footer-text">Copyright &copy; 2024. Todos os direitos reservados.</p>
+    </footer>
+</div>

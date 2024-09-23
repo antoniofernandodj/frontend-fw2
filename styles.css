@@ -1,0 +1,29 @@
+button {
+    background-color: #4CAF50; /* Verde */
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #45a049; /* Verde mais escuro */
+}
+
+button:active {
+    background-color: #3e8e41; /* Verde ainda mais escuro quando pressionado */
+}
+
+button NavLink {
+    text-decoration: none;
+    color: inherit; /* Mantém a cor do botão */
+    font-weight: bold;
+    display: block; /* Faz o link ocupar todo o botão */
+}
+
+button NavLink:hover {
+    color: #f0f0f0; /* Muda a cor do link ao passar o mouse */
+}

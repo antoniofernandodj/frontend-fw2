@@ -1,0 +1,43 @@
+.container {
+    background-color: #e6e6fa;
+    padding: 50px;
+    font-family: 'Times New Roman', Times, serif;
+    max-width: 600px;
+    margin: auto;
+    border-radius: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.header .title {
+    font-size: 40px;
+    color: #4b0082;
+    text-align: center;
+    text-shadow: 2px 2px 4px #8a2be2;
+}
+
+.content .intro p {
+    font-size: 18px;
+    color: #483d8b;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.item {
+    font-size: 16px;
+    color: #2f4f4f;
+    margin: 10px 0;
+    background-color: #f8f8ff;
+    padding: 8px;
+    border-radius: 5px;
+}
+
+.footer {
+    text-align: center;
+    margin-top: 30px;
+}
+
+.footer-text {
+    color: #4b0082;
+    font-size: 12px;
+    text-shadow: 1px 1px 2px #8a2be2;
+}
