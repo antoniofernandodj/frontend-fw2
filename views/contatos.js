@@ -1,38 +1,54 @@
 import { sleep } from "../utils.js";
 import { Page } from "../app.js";
 
-/**
- * @param { Page } page - A instância da classe Page.
- */
-export async function contatos(page) {
-    page.setTitle('Meus contatos')
 
-    await page.render('/pages/my-contacts/my-contacts.html');
+export class Contatos {
 
-    let email = document.querySelector('#email');
-    let end = document.querySelector('#end');
-    let wp = document.querySelector('#wp');
-    let tel = document.querySelector('#tel');
+    /**
+     * @param { Page } page - A instância da classe Page.
+     */
+    constructor(page) {
+        this.page = page;
+        this.otherContact = {
+            email: 'outro@email.com',
+            end: 'Rua Outra, numero 1',
+            wp: '+55 21 88888-8888',
+            tel: '21 1111-1111'
+        };
+    }
 
-    let otherContact = {
-        email: 'outro@email.com',
-        end: 'Rua Outra, numero 1',
-        wp: '+55 21 88888-8888',
-        tel: '21 1111-1111'
-    } 
+    async beforeInit() {
+        this.page.setTitle('Meus contatos');
+    }
 
-    page.addEventListener({
-        selector: '#update-contacts',
-        type: 'click',
-        handler: async () => {
-            alert('Atualizando contatos...');
+    async init() {
+        await this.page.render('/pages/my-contacts/my-contacts.html');
+    }
 
-            await sleep(1);
+    setupEventListeners() {
+        this.page.addEventListener({
+            selector: '#update-contacts',
+            type: 'click',
+            handler: async () => this.updateContacts()
+        });
+    }
 
-            email.innerHTML = otherContact.email;
-            end.innerHTML = otherContact.end;
-            wp.innerHTML = otherContact.wp;
-            tel.innerHTML = otherContact.tel;
-        }
-    });
+    async updateContacts() {
+        alert('Atualizando contatos...');
+        await sleep(1);
+
+        const email = document.querySelector('#email');
+        const end = document.querySelector('#end');
+        const wp = document.querySelector('#wp');
+        const tel = document.querySelector('#tel');
+
+        email.innerHTML = this.otherContact.email;
+        end.innerHTML = this.otherContact.end;
+        wp.innerHTML = this.otherContact.wp;
+        tel.innerHTML = this.otherContact.tel;
+    }
+
+    async afterInit() {
+        this.setupEventListeners();
+    }
 }

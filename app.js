@@ -56,7 +56,6 @@ export class Page {
         this.app.registerLinks()
 
         this.app.setCurrentTemplate(templatePath)
-        this.app.setCurrentPath(window.location.pathname)
         this.app.setCurrentTitle(document.title)
 
         try {
@@ -157,22 +156,20 @@ export class Page {
         return this.context;
     }
 
-    async setCss(cssFile) {
-        this.removeCss()
+    setCss(cssFile) {
+        console.log('Page.setCss')
         const id = 'cssTempCurrentPage'
-        const link = document.createElement('link');
-        link.id = id
-        link.rel = 'stylesheet';
-        link.href = cssFile
-        document.head.appendChild(link);
-    }
-
-    removeCss() {
-        const id = 'cssTempCurrentPage'
-        let cssLinkElement = document.getElementById(id)
-        if (cssLinkElement) {
-            cssLinkElement.remove()
+        const link1 = document.getElementById(id)
+        if (link1) {
+            link1.href = cssFile;
+        } else {
+            const link2 = document.createElement('link');
+            link2.id = id
+            link2.rel = 'stylesheet';
+            link2.href = cssFile
+            document.head.appendChild(link2);
         }
+
     }
 
     showLoading() {
@@ -194,8 +191,11 @@ export class Page {
 
 
 export class App {
-    constructor(options = {selector: null, css: null }) {
-        this.selector = options.selector
+    constructor(options = { selector: null, css: null, useHistory: true }) {
+        this.options = options
+
+        this.selector = this.options.selector
+        this.useHistory = this.options.useHistory;
         this.pages = {};
         this.state = {};
 
@@ -204,13 +204,40 @@ export class App {
         this.currentTemplate = null;
         this.currentTitle = null;
 
-        window.addEventListener('popstate', () => {
-            this.navigate(this.getCurrentPath(), this.getCurrentTitle());
-        });
-
-        if (options.css) {
-            this.setCss(options.css)
+        if (this.useHistory) {
+            window.addEventListener('popstate', () => {
+                this.navigate(this.getCurrentPath(), this.getCurrentTitle());
+            });
         }
+
+    }
+
+    registerRouters(routers) {
+        for (let router of routers) {
+            let paths = []
+            for (let path in router.pages) {
+                paths.push(path)
+            }
+
+            for (let path of paths) {
+                console.log(router.pages[path])
+                let { viewFunction, pageCss, routerCss } = router.pages[path];
+                this.view({
+                    path: path,
+                    css: pageCss,
+                    viewFunction: viewFunction,
+                    routerCss: routerCss
+                });
+            }
+            // for (let page of router.pages) {
+
+            //     console.log(page)
+            //     let { viewFunction, pageCss, routerCss } = page;
+            //     app.view({ path: })
+            // }
+
+        }
+
     }
 
     setState(newState) {
@@ -239,70 +266,114 @@ export class App {
         return await response.text();
     }
 
-    view({path, handler, css}) {
-        this.pages[path] = { handler, css };
-    }
+    view({ path, viewFunction, css , routerCss }) {
+        this.pages[path] = {
+            viewFunction: viewFunction,
+            pageCss: css,
+            routerCss: routerCss
+        };
+    };
 
     async navigate(name, title) {
-        if (this.pages[name]) {
 
-            history.pushState({}, title || '', name);
+        console.log({name: name})
+        console.log({'this.pages[name]': this.pages[name]})
+
+        if (this.pages[name]) {
+            if (this.useHistory) {
+                history.pushState({}, title || '', name);
+            }
+
             this.currentPath = name;
-            let page = new Page({selector: this.selector, app: this})
-            let { handler, css } = this.pages[name];
-            page.removeCss()
-            if (css) {
-                page.setCss(css)
+            let page = new Page({ selector: this.selector, app: this })
+            let { viewFunction, pageCss, routerCss } = this.pages[name];
+            let globalCss = this.options.css
+
+            if (globalCss) {
+                this.setAppCss(globalCss)
             }
+
+            if (routerCss) {
+                this.setRouterCss(routerCss)
+            }
+
+            if (pageCss) {
+                page.setCss(pageCss)
+            }
+
             try {
-                await handler(page);
-            } catch (e) {
-                console.error(e);
+
+                let view = new viewFunction(page)
+                await this.initializeView(view);
+
+            } catch(error) {
+                console.error({ error });
+                await this.handleViewFunctionFallback(viewFunction, page);
             }
+
         } else {
             console.error(`page ${name} not found`);
         }
     }
 
-    async setCss(cssFile) {
-        this.removeCss()
-        const id = 'cssTempCurrentApp'
-        const link = document.createElement('link');
-        link.id = id
-        link.rel = 'stylesheet';
-        link.href = cssFile
-        document.head.appendChild(link);
+    async initializeView(view) {
+        await view.beforeInit();
+        await view.init();
+        await view.afterInit();
     }
 
-
-    async setCssList(cssFiles) {        
-        const cls = 'cssTempCurrentAppClass'
-
-        let cssLinkElements = [...document.getElementsByClassName(cls)]
-        for (let cssLinkElement of cssLinkElements) {
-            cssLinkElement.remove()
-        }
-
-        for (let cssFile of cssFiles) {
-            const link = document.createElement('link');
-            link.setAttribute('class', cls)
-            link.rel = 'stylesheet';
-            link.href = cssFile
-            document.head.appendChild(link);
+    async handleViewFunctionFallback(viewFunction, page) {
+        try {
+            await viewFunction(page);
+        } catch (error) {
+            console.error('Fallback view function failed:', error);
         }
     }
 
-    removeCss() {
+    setAppCss(cssFile) {
+        console.log('setAppCss')
         const id = 'cssTempCurrentApp'
-        let cssLinkElement = document.getElementById(id)
-        if (cssLinkElement) {
-            cssLinkElement.remove()
+        const link1 = document.getElementById(id);
+        if (link1) {
+            console.log({ link1: link1 })
+            link1.href = cssFile
+
+        } else {
+
+            const link2 = document.createElement('link');
+            console.log({ link2: link2 })
+            link2.id = id
+            link2.rel = 'stylesheet';
+            link2.href = cssFile
+            document.head.appendChild(link2);
+        }
+
+    }
+
+    setRouterCss(cssFile) {
+        console.log('setRouterCss')
+        const id = 'cssTempCurrentRouter'
+        const link1 = document.getElementById(id);
+        if (link1) {
+            console.log({ link1: link1 })
+            link1.href = cssFile
+
+        } else {
+            const link2 = document.createElement('link');
+            console.log({ link2: link2 })
+            link2.id = id
+            link2.rel = 'stylesheet';
+            link2.href = cssFile
+            document.head.appendChild(link2);
         }
     }
     
     registerLinks() {
 
-        let links = document.querySelectorAll('NavLink');
+        let links = [
+            ...document.querySelectorAll('NavLink'),
+            ...document.querySelectorAll('[v-path]')
+        ]
     
         links.forEach(link => {
             if (link.listener) {
@@ -311,8 +382,8 @@ export class App {
     
             const handler = (e) => {
                 e.preventDefault();
-                const path = e.target.getAttribute('href');
-                let title = link.getAttribute('title');
+                const path = e.target.getAttribute('v-path');
+                let title = link.getAttribute('v-title');
                 this.setCurrentTitle(title);
                 document.title = title;
                 this.navigate(path, title);
@@ -359,5 +430,27 @@ export class App {
         if (this.currentPath && this.pages[this.currentPath]) {
             await this.navigate(this.currentPath);
         }
+    }
+}
+
+
+
+export class AppRouter {
+    constructor(
+        options = {
+            selector: null,
+            css: null
+        }
+    ) {
+        this.options = options;
+        this.pages = {};
+    }
+
+    view({ path, viewFunction, css }) {
+        this.pages[path] = {
+            viewFunction: viewFunction,
+            pageCss: css,
+            routerCss: this.options.css
+        };
     }
 }
