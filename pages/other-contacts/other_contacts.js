@@ -1,5 +1,5 @@
-import { sleep } from "../utils.js";
-import { Page } from "../app.js";
+import { sleep } from "../../utils.js";
+import { Page } from "../../app.js";
 
 /**
  * @param { Page } page - A instância da classe Page.

@@ -8,6 +8,32 @@
             <p>Esta é uma simples página de boas-vindas usando o layout estilizado.</p>
         </article>
     </section>
+    
+    <section>
+        <template v-type="success" v-notifier>
+            <p>
+                Mensagem sucesso: {{ msg }}
+            </p>
+        </template>
+    
+        <template v-type="error" v-notifier>
+            <p>
+                Error: {{ msg }}
+            </p>
+        </template>
+
+        <div>
+            <button id="notificar-sucesso">
+                notificar sucesso
+            </button>
+        </div>
+    
+        <div>
+            <button id="notificar-erro">
+                notificar erro
+            </button>
+        </div>
+    </section>
 
     <section>
         <article>

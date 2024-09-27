@@ -1,14 +1,32 @@
-import { Page } from "../app.js";
+import { Page } from "../../app.js";
 
 
 /**
  * @param { Page } page - A instância da classe Page.
  */
 export async function olaMundo(page) {
-
+    
     await page.render('/pages/ola-mundo/ola-mundo.html', {
         items: ['item1', 'item2', 'item3'],
         counter: getCounter(page)
+    });
+
+    page.addEventListener({
+        selector: '#notificar-sucesso', type: 'click',
+        handler: () => {
+            page.notify('Mensagem de sucesso exibida com sucesso!', {
+                type: 'success', duration: 3000
+            });
+        }
+    });
+
+    page.addEventListener({
+        selector: '#notificar-erro', type: 'click',
+        handler: () => {
+            page.notify('Mensagem de erro! :(', {
+                type: 'error', duration: 5000
+            });
+        }
     });
 
     let stateButton = document.querySelector('#state')

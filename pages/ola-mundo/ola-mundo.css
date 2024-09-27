@@ -41,3 +41,37 @@
     font-size: 12px;
     text-shadow: 1px 1px 2px #8a2be2;
 }
+
+
+#notificar-sucesso {
+    background-color: #4CAF50; /* Verde */
+    color: white;
+}
+
+#notificar-erro {
+    background-color: #f44336; /* Vermelho */
+    color: white;
+}
+
+/*
+Estilos para mensagens de notificação
+p {
+    padding: 10px;
+    border-radius: 5px;
+    margin: 0;
+    display: none; /* Oculta inicialmente
+}
+*/
+
+
+[v-type="success"] {
+    background-color: #dff0d8; /* Verde claro */
+    color: #3c763d; /* Verde escuro */
+    border: 1px solid #d6e9c6; /* Bordo verde */
+}
+
+[v-type="error"] {
+    background-color: #f2dede; /* Vermelho claro */
+    color: #a94442; /* Vermelho escuro */
+    border: 1px solid #ebccd1; /* Bordo vermelho */
+}

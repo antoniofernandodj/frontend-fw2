@@ -1,3 +1,27 @@
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+function createElement(type, params) {
+    const element = document.createElement(type);
+    for (let key in params) {
+        let value = params[key];
+        element.setAttribute(key, value)
+    }
+    return element
+}
+
+function setAttributes(element, params) {
+    for (let key in params) {
+        let value = params[key];
+        element.setAttribute(key, value)
+    }
+}
+
 export class Page {
     constructor({selector, app}) {
         this.selector = selector
@@ -27,10 +51,52 @@ export class Page {
         }
     }
 
-    addEventListener(ev) {
-        const element = document.querySelector(ev.selector);
+    addEventListener({ type, selector, handler }) {
+        const element = document.querySelector(selector);
         if (element) {
-            element.addEventListener(ev.type, ev.handler);
+            element.addEventListener(type, handler);
+        }
+    }
+
+    notify(msg, { type, duration }) {
+        const notifiers = [...document.querySelectorAll(`template[v-notifier]`)];
+
+        for (let notifier of notifiers) {
+            const regex = /\{\{\s*msg\s*\}\}/g;
+            let notifierType = notifier.getAttribute('v-type')
+
+            if (notifierType == type) {
+
+                const id = generateUUID()
+
+                const originalContent = notifier.innerHTML;
+
+                notifier.innerHTML = notifier.innerHTML.replace(regex, msg);
+                const clone = notifier.content.cloneNode(true);
+
+                const firstElement = clone.firstElementChild;
+                if (firstElement) {
+                    setAttributes(firstElement, {
+                        'id': id,
+                        'v-notifier': '',
+                        'v-type': notifierType
+                    })
+                }
+                    
+                notifier.replaceWith(clone);
+                setTimeout(() => {
+
+                    const template = createElement('template', {
+                        'v-notifier': '',
+                        'v-type': notifierType
+                    });
+
+                    template.innerHTML = originalContent;
+                    let clonedElement = document.getElementById(id)
+                    clonedElement.replaceWith(template);
+                    
+                }, duration)
+            }
         }
     }
 
@@ -38,9 +104,16 @@ export class Page {
         return this.app.getState()
     }
 
+    getCurrentApp() {
+        return this.app
+    }
+
     async setState(state) {
         this.app.setState(state)
-        await this.app.navigate(this.app.getCurrentPath(), this.app.getCurrentTitle())
+        await this.app.navigate(
+            this.app.getCurrentPath(),
+            this.app.getCurrentTitle()
+        )
     }
 
     async addState(newState) {
@@ -157,10 +230,14 @@ export class Page {
     }
 
     setCss(cssFile) {
-        console.log('Page.setCss')
         const id = 'cssTempCurrentPage'
         const link1 = document.getElementById(id)
         if (link1) {
+
+            if (link1.href == cssFile) {
+                return
+            }
+
             link1.href = cssFile;
         } else {
             const link2 = document.createElement('link');
@@ -212,7 +289,7 @@ export class App {
 
     }
 
-    registerRouters(routers) {
+    includeRouters(routers) {
         for (let router of routers) {
             let paths = []
             for (let path in router.pages) {
@@ -220,21 +297,15 @@ export class App {
             }
 
             for (let path of paths) {
-                console.log(router.pages[path])
-                let { viewFunction, pageCss, routerCss } = router.pages[path];
+                let { viewFunction, pageCss, routerCss, guard } = router.pages[path];
                 this.view({
                     path: path,
                     css: pageCss,
                     viewFunction: viewFunction,
-                    routerCss: routerCss
+                    routerCss: routerCss,
+                    guard: guard
                 });
             }
-            // for (let page of router.pages) {
-
-            //     console.log(page)
-            //     let { viewFunction, pageCss, routerCss } = page;
-            //     app.view({ path: })
-            // }
 
         }
 
@@ -266,18 +337,16 @@ export class App {
         return await response.text();
     }
 
-    view({ path, viewFunction, css , routerCss }) {
+    view({ path, viewFunction, css , routerCss, guard }) {
         this.pages[path] = {
             viewFunction: viewFunction,
             pageCss: css,
-            routerCss: routerCss
+            routerCss: routerCss,
+            guard: guard
         };
     };
 
     async navigate(name, title) {
-
-        console.log({name: name})
-        console.log({'this.pages[name]': this.pages[name]})
 
         if (this.pages[name]) {
             if (this.useHistory) {
@@ -286,8 +355,15 @@ export class App {
 
             this.currentPath = name;
             let page = new Page({ selector: this.selector, app: this })
-            let { viewFunction, pageCss, routerCss } = this.pages[name];
+            let { viewFunction, pageCss, routerCss, guard } = this.pages[name];
             let globalCss = this.options.css
+
+            if (guard) {
+                if (!guard()) {
+                    console.error('Não deu :(')
+                    return
+                }
+            }
 
             if (globalCss) {
                 this.setAppCss(globalCss)
@@ -307,7 +383,6 @@ export class App {
                 await this.initializeView(view);
 
             } catch(error) {
-                console.error({ error });
                 await this.handleViewFunctionFallback(viewFunction, page);
             }
 
@@ -331,17 +406,17 @@ export class App {
     }
 
     setAppCss(cssFile) {
-        console.log('setAppCss')
-        const id = 'cssTempCurrentApp'
+        const id = 'cssTempCurrentApp';
         const link1 = document.getElementById(id);
         if (link1) {
-            console.log({ link1: link1 })
+            if (link1.href == cssFile) {
+                return
+            }
             link1.href = cssFile
 
         } else {
 
             const link2 = document.createElement('link');
-            console.log({ link2: link2 })
             link2.id = id
             link2.rel = 'stylesheet';
             link2.href = cssFile
@@ -351,19 +426,21 @@ export class App {
     }
 
     setRouterCss(cssFile) {
-        console.log('setRouterCss')
-        const id = 'cssTempCurrentRouter'
+        const id = 'cssTempCurrentRouter';
         const link1 = document.getElementById(id);
         if (link1) {
-            console.log({ link1: link1 })
-            link1.href = cssFile
+
+            if (link1.href == cssFile) {
+                return
+            }
+
+            link1.href = cssFile;
 
         } else {
             const link2 = document.createElement('link');
-            console.log({ link2: link2 })
-            link2.id = id
+            link2.id = id;
             link2.rel = 'stylesheet';
-            link2.href = cssFile
+            link2.href = cssFile;
             document.head.appendChild(link2);
         }
     }
@@ -446,11 +523,12 @@ export class AppRouter {
         this.pages = {};
     }
 
-    view({ path, viewFunction, css }) {
+    view({ path, viewFunction, css, guard }) {
         this.pages[path] = {
             viewFunction: viewFunction,
             pageCss: css,
-            routerCss: this.options.css
+            routerCss: this.options.css,
+            guard: guard
         };
     }
 }

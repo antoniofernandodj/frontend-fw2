@@ -1,4 +1,4 @@
-import { Page } from "../app.js";
+import { Page } from "../../app.js";
 
 /**
  * @param { Page } page - A instância da classe Page.
@@ -11,7 +11,6 @@ export async function form(page) {
     })
 
     // page.openModal('/pages/modals/contact-details.html', { contact });
-    // page.notify('Contato atualizado com sucesso!', { type: 'success', duration: 3000 });
     // Roteamento com Parâmetros Dinâmicos
     // const userId = page.getParam('id');
 
