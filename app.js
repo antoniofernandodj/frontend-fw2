@@ -1,3 +1,10 @@
+class PageUnauthorizedException extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'PageUnauthorizedException';
+    }
+}
+
 function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
         const r = Math.random() * 16 | 0;
@@ -267,6 +274,26 @@ export class Page {
 }
 
 
+export function login(user) {
+    localStorage.setItem('login', JSON.stringify(user))
+
+}
+
+export function logout() {
+    localStorage.setItem('login', null)
+
+}
+
+export function currentUser() {
+    let login_data = localStorage.getItem('login');
+    if (!login_data) {
+        return null;
+    }
+
+    return JSON.parse(login_data);
+}
+
+
 export class App {
     constructor(options = { selector: null, css: null, useHistory: true }) {
         this.options = options
@@ -360,8 +387,8 @@ export class App {
 
             if (guard) {
                 if (!guard()) {
-                    console.error('Não deu :(')
-                    return
+                    let msg = 'Pagina não autorizada.'
+                    throw new PageUnauthorizedException(msg)
                 }
             }
 
