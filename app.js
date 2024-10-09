@@ -33,7 +33,7 @@ export class Page {
     constructor({selector, app}) {
         this.selector = selector
         this.app = app
-        this.context = {}
+        this.context = {};
     }
 
     async handleForm(formSelector, handler) {
@@ -62,6 +62,109 @@ export class Page {
         const element = document.querySelector(selector);
         if (element) {
             element.addEventListener(type, handler);
+        }
+    }
+
+    goBack() {
+        window.history.back();
+    }
+
+    goForward() {
+        window.history.forward();
+    }
+
+    getLocation(callback) {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    callback(position);
+                },
+                (error) => {
+                    console.error('Erro ao obter localização:', error);
+                }
+            );
+        } else {
+            console.error('Geolocalização não é suportada pelo navegador.');
+        }
+    }
+
+    async openModal(
+        templatePath,
+        context = {},
+        styleModalContainer = {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: '1000',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+        },
+        styleModalDialog = {
+            backgroundColor: '#fff',
+            padding: '20px',
+            borderRadius: '8px',
+            maxWidth: '600px',
+            width: '100%'
+        }
+
+    ) {
+        try {
+            let modalContent = await this.loadTemplate(templatePath);
+            
+            modalContent = this.interpolate(modalContent, context);
+
+            let modalContainer = document.getElementById('modal-container');
+            if (!modalContainer) {
+                modalContainer = document.createElement('div');
+                modalContainer.id = 'modal-container';
+                modalContainer.style.position = styleModalContainer.position;
+                modalContainer.style.top = styleModalContainer.top;
+                modalContainer.style.left = styleModalContainer.left;
+                modalContainer.style.width = styleModalContainer.width;
+                modalContainer.style.height = styleModalContainer.height;
+                modalContainer.style.backgroundColor = styleModalContainer.backgroundColor;
+                modalContainer.style.zIndex = styleModalContainer.zIndex;
+                modalContainer.style.display = styleModalContainer.display;
+                modalContainer.style.justifyContent = styleModalContainer.justifyContent;
+                modalContainer.style.alignItems = styleModalContainer.alignItems;
+                document.body.appendChild(modalContainer);
+            }
+
+            const modalDialog = document.createElement('div');
+            modalDialog.style.backgroundColor = styleModalDialog.backgroundColor
+            modalDialog.style.padding = styleModalDialog.padding
+            modalDialog.style.borderRadius = styleModalDialog.borderRadius
+            modalDialog.style.maxWidth = styleModalDialog.maxWidth
+            modalDialog.style.width = styleModalDialog.width
+            modalDialog.innerHTML = modalContent
+
+            modalContainer.innerHTML = '';
+            modalContainer.appendChild(modalDialog);
+
+            modalContainer.addEventListener('click', (event) => {
+                if (event.target === modalContainer) {
+                    this.closeModal();
+                }
+            });
+
+            const closeButton = modalDialog.querySelector('[data-close="modal"]');
+            if (closeButton) {
+                closeButton.addEventListener('click', () => this.closeModal());
+            }
+
+        } catch (error) {
+            console.error('Failed to load modal:', error);
+        }
+    }
+
+    closeModal() {
+        const modalContainer = document.getElementById('modal-container');
+        if (modalContainer) {
+            modalContainer.remove();
         }
     }
 
@@ -133,7 +236,6 @@ export class Page {
     }
 
     async render(templatePath, renderContext = {}) {
-        this.app.registerLinks()
 
         this.app.setCurrentTemplate(templatePath)
         this.app.setCurrentTitle(document.title)
@@ -308,12 +410,39 @@ export class App {
         this.currentTemplate = null;
         this.currentTitle = null;
 
+        this.beforeNavigateCallbacks = [];
+        this.afterNavigateCallbacks = [];
+
         if (this.useHistory) {
             window.addEventListener('popstate', () => {
                 this.navigate(this.getCurrentPath(), this.getCurrentTitle());
             });
         }
 
+    }
+
+    beforeNavigate(callback) {
+        this.beforeNavigateCallbacks.push(callback);
+    }
+
+    afterNavigate(callback) {
+        this.afterNavigateCallbacks.push(callback);
+    }
+
+    async runBeforeNavigate(next) {
+        for (let callback of this.beforeNavigateCallbacks) {
+            await callback(next);
+        }
+    }
+
+    async runAfterNavigate(next) {
+
+        for (let callback of this.afterNavigateCallbacks) {
+
+            console.log({callback: callback, next: next})
+
+            await callback(next);
+        }
     }
 
     includeRouters(routers) {
@@ -385,33 +514,34 @@ export class App {
             let { viewFunction, pageCss, routerCss, guard } = this.pages[name];
             let globalCss = this.options.css
 
-            if (guard) {
-                if (!guard()) {
-                    let msg = 'Pagina não autorizada.'
-                    throw new PageUnauthorizedException(msg)
+            await this.runBeforeNavigate(async () => {
+                if (guard && !guard()) {
+                    throw new PageUnauthorizedException(
+                        'Página não autorizada.'
+                    );
                 }
-            }
 
-            if (globalCss) {
-                this.setAppCss(globalCss)
-            }
+                if (globalCss) {
+                    this.setGlobalCss(globalCss);
+                }
 
-            if (routerCss) {
-                this.setRouterCss(routerCss)
-            }
+                if (routerCss) {
+                    this.setRouterCss(routerCss);
+                }
 
-            if (pageCss) {
-                page.setCss(pageCss)
-            }
+                if (pageCss) {
+                    page.setCss(pageCss);
+                }
 
-            try {
+                try {
+                    let view = new viewFunction(page);
+                    await this.initializeView(view);
+                } catch (error) {
+                    await this.handleViewFunctionFallback(viewFunction, page);
+                }
 
-                let view = new viewFunction(page)
-                await this.initializeView(view);
-
-            } catch(error) {
-                await this.handleViewFunctionFallback(viewFunction, page);
-            }
+                await this.runAfterNavigate(async () => {});
+            });
 
         } else {
             console.error(`page ${name} not found`);
@@ -432,7 +562,7 @@ export class App {
         }
     }
 
-    setAppCss(cssFile) {
+    setGlobalCss(cssFile) {
         const id = 'cssTempCurrentApp';
         const link1 = document.getElementById(id);
         if (link1) {
@@ -449,7 +579,6 @@ export class App {
             link2.href = cssFile
             document.head.appendChild(link2);
         }
-
     }
 
     setRouterCss(cssFile) {
@@ -472,7 +601,7 @@ export class App {
         }
     }
     
-    registerLinks() {
+    register() {
 
         let links = [
             ...document.querySelectorAll('NavLink'),
@@ -543,11 +672,16 @@ export class AppRouter {
     constructor(
         options = {
             selector: null,
-            css: null
+            css: null,
+            name: generateUUID()
         }
     ) {
         this.options = options;
+        this.name = options.name,
+        this.selector = options.selector
         this.pages = {};
+        this.state = {};
+
     }
 
     view({ path, viewFunction, css, guard }) {
@@ -557,5 +691,155 @@ export class AppRouter {
             routerCss: this.options.css,
             guard: guard
         };
+
+    }
+
+    async navigate(name, title) {
+
+        if (this.pages[name]) {
+            if (this.useHistory) {
+                history.pushState({}, title || '', name);
+            }
+
+            this.currentPath = name;
+            let page = new Page({ selector: this.selector, app: this })
+            let { viewFunction, pageCss, routerCss, guard } = this.pages[name];
+            let globalCss = this.options.css
+
+            if (guard) {
+                if (!guard()) {
+                    let msg = 'Pagina não autorizada.'
+                    throw new PageUnauthorizedException(msg)
+                }
+            }
+
+            if (globalCss) {
+                this.setGlobalCss(globalCss)
+            }
+
+            if (routerCss) {
+                this.setRouterCss(routerCss)
+            }
+
+            if (pageCss) {
+                page.setCss(pageCss)
+            }
+
+            try {
+
+                let view = new viewFunction(page)
+                await this.initializeView(view);
+
+            } catch(error) {
+                await this.handleViewFunctionFallback(viewFunction, page);
+            }
+
+        } else {
+            console.error(`page ${name} not found`);
+        }
+    }
+
+    setGlobalCss(cssFile) {
+        const id = 'cssTempCurrentApp';
+        const link1 = document.getElementById(id);
+        if (link1) {
+            if (link1.href == cssFile) {
+                return
+            }
+            link1.href = cssFile
+
+        } else {
+
+            const link2 = document.createElement('link');
+            link2.id = id
+            link2.rel = 'stylesheet';
+            link2.href = cssFile
+            document.head.appendChild(link2);
+        }
+    }
+
+    setRouterCss(cssFile) {
+        const id = 'cssTempCurrentRouter';
+        const link1 = document.getElementById(id);
+        if (link1) {
+
+            if (link1.href == cssFile) {
+                return
+            }
+
+            link1.href = cssFile;
+
+        } else {
+            const link2 = document.createElement('link');
+            link2.id = id;
+            link2.rel = 'stylesheet';
+            link2.href = cssFile;
+            document.head.appendChild(link2);
+        }
+    }
+    async initializeView(view) {
+        await view.beforeInit();
+        await view.init();
+        await view.afterInit();
+    }
+
+    async handleViewFunctionFallback(viewFunction, page) {
+        try {
+            await viewFunction(page);
+        } catch (error) {
+            console.error('Fallback view function failed:', error);
+        }
+    }
+    getState() {
+        return this.state
+    }
+
+    setState(newState) {
+        this.state = { ...this.state, ...newState };
+    }
+
+    register() {
+        let links = [
+            ...document.querySelectorAll('NavLink'),
+            ...document.querySelectorAll('[v-path]')
+        ]
+    
+        links.forEach(link => {
+
+            link.data = link.data || {}
+
+            if (link.data[this.name]) {
+                let handler = link.data[this.name]
+                link.removeEventListener('click', handler);
+            }
+    
+            const handler = (e) => {
+                e.preventDefault();
+                const path = e.target.getAttribute('v-path');
+                let title = link.getAttribute('v-title');
+                this.setCurrentTitle(title);
+                document.title = title;
+                this.navigate(path, title);
+            };
+    
+            link.addEventListener('click', handler);
+            link.data[this.name] = handler
+        });
+    }
+
+    setCurrentTemplate(currentTemplate) {
+        this.currentTemplate = currentTemplate
+    }
+
+    setCurrentTitle(currentTitle) {
+        this.currentTitle = currentTitle
+    }
+
+    setCurrentContext(currentContext) {
+        this.currentContext = currentContext
+    }
+
+    getCurrentTitle() {
+        return this.currentTitle
     }
 }

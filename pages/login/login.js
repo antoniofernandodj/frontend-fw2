@@ -1,5 +1,6 @@
 import { currentUser, login, Page } from "../../app.js";
 import { UserRepository } from "../../database.js";
+import { MessageBox } from "../../messagebox.js";
 
 
 // Criando um erro personalizado extendendo a classe Error
@@ -26,6 +27,15 @@ export async function loginController(page) {
 
     let repo = new UserRepository()
 
+    let reply = await MessageBox.warning(
+        'Confirmação',
+        'Deseja realmente renderizar esta page?'
+    );
+
+    if (reply == MessageBox.Cancel) {
+        return
+    }
+
     await page.render('/pages/login/login.html');
 
     await page.handleForm("#form", (data) => {
@@ -48,10 +58,13 @@ export async function loginController(page) {
             window.alert(msg)
             throw new SenhaIncorretaException(msg)
         }
-
+        
     })
+    
+    page.getLocation((position) => {
+        console.log(`Latitude: ${position.coords.latitude}, Longitude: ${position.coords.longitude}`);
+    });
 
-    // page.openModal('/pages/modals/contact-details.html', { contact });
     // Roteamento com Parâmetros Dinâmicos
     // const userId = page.getParam('id');
 
@@ -66,61 +79,22 @@ export async function loginController(page) {
     //     email: { required: true, email: true }
     // });
 
-    // Suporte a Rotas Protegidas (Autorização)
-
-    // Implementar rotas que só podem ser acessadas se o
-    // usuário estiver autenticado ou tiver certas permissões.
-
     // const data = page.getCache('userData') || await fetchUserData();
     // page.setCache('userData', data);
 
-    // page.goBack();
-    // page.goForward();
-
     // page.uploadFile('#fileInput', {
     //     onProgress: (percentage) => {
-    //         page.updateProgressBar(percentage);
+    //         console.log(`Progresso: ${percentage}%`);
     //     },
-    //     onSuccess: () => {
-    //         page.notify('Upload concluído com sucesso!', { type: 'success' });
+    //     onSuccess: (response) => {
+    //         console.log('Upload concluído com sucesso!', response);
+    //     },
+    //     onError: (error) => {
+    //         console.error('Erro no upload:', error);
     //     }
-    // });
-
-    // page.beforeNavigate(async (next) => {
-    //     if (page.hasUnsavedChanges()) {
-    //         if (!confirm('Você tem mudanças não salvas. Tem certeza que quer sair?')) return;
-    //     }
-    //     await next();
-    // });
-
-    // pageAfterNavigate(async (next) => {
-    //     if (page.hasUnsavedChanges()) {
-    //         if (!confirm('Você tem mudanças não salvas. Tem certeza que quer sair?')) return;
-    //     }
-    //     await next();
-    // });
-
-    // app.beforeNavigate(async (next) => {
-    //     if (app.hasUnsavedChanges()) {
-    //         if (!confirm('Você tem mudanças não salvas. Tem certeza que quer sair?')) return;
-    //     }
-    //     await next();
-    // });
-
-    // app.afterNavigate(async (next) => {
-    //     if (app.hasUnsavedChanges()) {
-    //         if (!confirm('Você tem mudanças não salvas. Tem certeza que quer sair?')) return;
-    //     }
-    //     await next();
     // });
 
     // page.enablePushNotifications();
-
-    // login(user.id)
-
-    // page.getLocation((position) => {
-    //     console.log(`Latitude: ${position.coords.latitude}, Longitude: ${position.coords.longitude}`);
-    // });
 
     // page.enableDragAndDrop('#sortable-list', {
     //     onDrop: (item) => console.log('Item dropped:', item)

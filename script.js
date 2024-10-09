@@ -15,8 +15,8 @@ const app = new App({
     useHistory: false,
 });
 
-const router1 = new AppRouter({ css: '/styles.css' });
-const router2 = new AppRouter({ css: '/styles.css' });
+const router1 = new AppRouter({ css: '/styles.css', selector: '#app', name: 'router1' });
+const router2 = new AppRouter({ css: '/styles.css', selector: '#app', name: 'router2' });
 
 
 router1.view({
@@ -37,7 +37,7 @@ router2.view({
     path: '/app/my-contacts/',
     css: '/pages/my-contacts/my-contacts.css',
     viewFunction: Contatos,
-    guard: contactsGuard
+    guard: () => contactsGuard('antonio')
 });
 
 router2.view({
@@ -61,6 +61,18 @@ router2.view({
     },
 })
 
+app.beforeNavigate(async (next) => {
+    if (true) {
+        if (!confirm('Tem certeza que quer entrar na page?')) return;
+    }
+    await next();
+});
+
+app.afterNavigate(async (next) => {
+    console.log('Navegação concluída!');
+    await next();
+});
+
 app.includeRouters([ router1, router2 ])
 
-app.navigate('/app/ola-mundo/');
+app.register()

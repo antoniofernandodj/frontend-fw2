@@ -1,17 +1,16 @@
 import { currentUser } from "../app.js";
 
-export const contactsGuard = () => {
+export const contactsGuard = (nome) => {
 
     let user = currentUser();
-    console.log((!user))
 
     if (!user) {
         window.alert('rota bloqueada para não logados!');
         return false
     }
 
-    if (user.nome != 'antonio') {
-        window.alert('rota bloqueada para não logados!');
+    if (user.nome != nome) {
+        window.alert(`rota bloqueada para quem não for ${nome}!`);
         return false
     }
 

@@ -22,6 +22,7 @@ export class Contatos {
     }
 
     async init() {
+        const userId = this.page.getParam('contact'); // userId será '123'
         await this.page.render('/pages/my-contacts/my-contacts.html');
     }
 
@@ -33,9 +34,10 @@ export class Contatos {
         });
     }
 
-    async updateContacts() {
+    async updateContacts(page) {
         alert('Atualizando contatos...');
         await sleep(1);
+
 
         const email = document.querySelector('#email');
         const end = document.querySelector('#end');
@@ -46,6 +48,13 @@ export class Contatos {
         end.innerHTML = this.otherContact.end;
         wp.innerHTML = this.otherContact.wp;
         tel.innerHTML = this.otherContact.tel;
+
+        await sleep(1);
+        await this.page.openModal('/pages/modals/contact-details.html', {
+            name: 'John Doe',
+            phone: '+123456789',
+            email: 'john.doe@example.com'
+        });
     }
 
     async afterInit() {

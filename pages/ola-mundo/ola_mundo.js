@@ -33,10 +33,16 @@ export async function olaMundo(page) {
     stateButton.addEventListener('click', async () => await incrConter(page))
 }
 
+/**
+ * @param { Page } page
+ */
 const incrConter = async (page) => {
     await page.setState({counter: getCounter(page) + 1})
 }
 
+/**
+ * @param { Page } page
+ */
 const getCounter = (page) => {
     let state = page.getState()
     return (state.counter) || 0
