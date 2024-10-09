@@ -1,4 +1,4 @@
-import { Page } from "../../app.js";
+import { currentUser, Page } from "../../app.js";
 
 
 /**
@@ -8,6 +8,7 @@ export async function olaMundo(page) {
     
     await page.render('/pages/ola-mundo/ola-mundo.html', {
         items: ['item1', 'item2', 'item3'],
+        'user': currentUser() ? currentUser().nome : '',
         counter: getCounter(page)
     });
 
